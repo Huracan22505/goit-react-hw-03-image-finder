@@ -1,26 +1,28 @@
 import React, { Component } from 'react';
 import { toast } from 'react-toastify';
+import PropTypes from 'prop-types';
 import s from './Searchbar.module.css';
 
 export default class Searchbar extends Component {
   state = {
-    hitsName: '',
+    query: '',
   };
 
-  hendleNameChange = e => {
-    this.setState({ hitsName: e.currentTarget.value.toLowerCase() });
+  hendleChange = e => {
+    this.setState({ query: e.currentTarget.value.toLowerCase() });
   };
 
   hendleSubmit = e => {
     e.preventDefault();
 
-    if (this.state.hitsName.trim() === '') {
-      toast.error('введите шо-нибудь');
+    if (this.state.query.trim() === '') {
+      toast.error('Вы ввели пустой запрос!');
       return;
     }
 
-    this.props.onSubmit(this.state.hitsName);
-    this.setState({ hitsName: '' });
+    this.props.onSubmit(this.state.query);
+
+    this.setState({ query: '' });
   };
 
   render() {
@@ -35,11 +37,15 @@ export default class Searchbar extends Component {
             className={s.searchFormInput}
             type="text"
             placeholder="Search images and photos"
-            value={this.state.hitsName}
-            onChange={this.hendleNameChange}
+            value={this.state.query}
+            onChange={this.hendleChange}
           />
         </form>
       </header>
     );
   }
 }
+
+Searchbar.propTypes = {
+  onSubmit: PropTypes.func.isRequired,
+};
