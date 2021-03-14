@@ -1,53 +1,103 @@
 import React, { Component } from 'react';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import shortid from 'shortid';
 import s from './App.module.css';
 
+import pixabayApi from 'services/pixabayApi';
 import Searchbar from 'components/Searchbar';
 import ImageGallery from 'components/ImageGallery';
+import Loader from 'components/Loader';
+import Button from 'components/Button';
 import Modal from 'components/Modal';
 
 class App extends Component {
   state = {
+    hits: [],
+    currentPage: 1,
+    searchQuery: '',
+    isLoading: false,
+    error: null,
     showModal: false,
-    hitsName: '',
+    largeImage: null,
   };
 
-  hendleFormSubmit = hitsName => {
-    this.setState({ hitsName });
+  componentDidUpdate(prevProps, prevState) {
+    if (prevState.searchQuery !== this.state.searchQuery) {
+      this.fetchHits();
+    }
+  }
+
+  onChangeQuery = query => {
+    this.setState({
+      searchQuery: query,
+      currentPage: 1,
+      hits: [],
+      error: null,
+    });
   };
 
-  // componentDidMount() {
-  //   this.setState({ loading: true });
+  fetchHits = () => {
+    const { currentPage, searchQuery, error } = this.state;
+    const options = {
+      searchQuery,
+      currentPage,
+    };
 
-  // toggleModal = () => {
-  //   this.setState(({ showModal }) => ({
-  //     showModal: !showModal,
-  //   }));
-  // };
+    this.setState({ isLoading: true });
+
+    pixabayApi
+      .fetchHits(options)
+      .then(hits => {
+        this.setState(prevState => ({
+          hits: [...prevState.hits, ...hits],
+          currentPage: prevState.currentPage + 1,
+        }));
+
+        if (currentPage !== 1) {
+          window.scrollTo({
+            top: document.documentElement.scrollHeight,
+            behavior: 'smooth',
+          });
+        }
+      })
+      .catch(error => this.setState({ error }))
+      .finally(() => this.setState({ isLoading: false }));
+  };
+
+  detectModalImage = url => {
+    console.log(url);
+    this.setState({ largeImage: url });
+    this.toggleModal();
+  };
+
+  toggleModal = () => {
+    this.setState(({ showModal }) => ({
+      showModal: !showModal,
+    }));
+  };
 
   render() {
-    const { showModal, hitsName } = this.state;
+    const { showModal, hits, isLoading, error } = this.state;
+    const shouldRenderLoadMoreButton = hits.length > 0 && !isLoading;
 
     return (
-      <>
-        <Searchbar onSubmit={this.hendleFormSubmit} />
-        <ImageGallery hitsName={hitsName} />
-        <ToastContainer autoClose={3000} />
-        {/* <button type="button" onClick={this.toggleModal}>
-          Открыть модалку
-        </button>
+      <div className={s.app}>
+        {error && <h1>Ошибка</h1>}
+
+        <Searchbar onSubmit={this.onChangeQuery} />
+
+        <ImageGallery hits={hits} onClick={this.detectModalImage} />
+
+        {isLoading && <Loader />}
+
+        {shouldRenderLoadMoreButton && <Button onClick={this.fetchHits} />}
 
         {showModal && (
-          <Modal onClose={this.toggleModal}>
-            <h1>Hello bro</h1>
-            <button type="button" onClick={this.toggleModal}>
-              Закрыть
-            </button>
-          </Modal>
-        )} */}
-      </>
+          <Modal onClose={this.toggleModal} url={this.state.largeImage} />
+        )}
+
+        <ToastContainer autoClose={3000} />
+      </div>
     );
   }
 }
